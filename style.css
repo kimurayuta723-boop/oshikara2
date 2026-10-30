@@ -1,0 +1,174 @@
+:root{
+  --bg:#0B0B10; --panel:#15151D; --line:#2A2A36; --line2:#3A3A48;
+  --text:#FFFFFF; --sub:#B4B4C6; --sub2:#A6A6B8;
+  --yellow:#FFE600; --accent:#FF3D9A; --oshi:#FF3D9A;
+  --round:'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif;
+  --sans:'Noto Sans JP', system-ui, sans-serif;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+body{min-height:100dvh}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:2px}
+[hidden]{display:none !important}
+
+/* ---------- screens ---------- */
+.screen{display:none;flex-direction:column;gap:18px;max-width:480px;margin:0 auto;min-height:100dvh;
+  padding:calc(env(safe-area-inset-top) + 18px) 20px calc(env(safe-area-inset-bottom) + 24px)}
+.screen.is-active{display:flex}
+
+.label,.field label{font-size:13px;font-weight:700;color:var(--sub)}
+.field{display:flex;flex-direction:column;gap:8px}
+.msg{font-size:13px;color:var(--sub);margin:0;text-align:center}
+.fine{font-size:12px;color:var(--sub2);margin:0;line-height:1.6}
+input[type=text]{height:50px;border-radius:14px;border:1px solid #33333F;background:var(--panel);font-size:16px;padding:0 16px;width:100%}
+input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px}
+input::placeholder{color:#8A8A9E}
+
+.btn{min-height:52px;border-radius:999px;border:none;display:flex;align-items:center;justify-content:center;gap:10px;
+  font-family:var(--round);font-weight:900;font-size:17px;padding:0 22px;transition:transform .08s}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);color:#0B0B10}
+.btn-yellow{background:var(--yellow);color:#0B0B10}
+.btn-ghost{background:var(--panel);border:1px solid var(--line2);font-weight:800;font-size:16px}
+.btn-xl{min-height:60px;font-size:19px}
+.btn:disabled{opacity:.45}
+
+.uchiwa-text{font-family:var(--round);font-weight:900;color:#fff;-webkit-text-stroke:var(--stroke,8px) var(--oshi);paint-order:stroke fill;line-height:1.1}
+
+/* ---------- home ---------- */
+.home-hero{display:flex;flex-direction:column;align-items:center;gap:6px;padding:28px 0 8px}
+.logo{font-family:var(--round);font-weight:900;font-size:58px;color:#fff;-webkit-text-stroke:12px var(--accent);paint-order:stroke fill;letter-spacing:.02em}
+.tagline{margin:0;color:var(--sub);font-weight:700}
+.color-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.swatch{height:52px;border-radius:16px;border:3px solid transparent;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#0B0B10}
+.swatch[aria-checked=true]{border-color:#fff;box-shadow:0 0 0 2px var(--bg) inset}
+.home-actions{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+.join-box{display:flex;flex-direction:column;gap:8px}
+.join-box label{font-size:13px;font-weight:700;color:var(--sub)}
+.join-row{display:flex;gap:10px}
+.join-row input{flex:1;font-size:22px;letter-spacing:.3em;text-align:center;font-weight:700}
+.or{text-align:center;color:var(--sub2);font-size:12px}
+
+/* ---------- room ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;min-height:44px;gap:8px}
+.topbar-title{font-family:var(--round);font-weight:800;font-size:18px;flex:1;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{font-size:12px;color:var(--sub);letter-spacing:.08em;font-weight:700;padding:0 12px;min-height:32px;display:flex;align-items:center;gap:4px;border-radius:999px;background:var(--panel);border:1px solid var(--line)}
+.pill span{color:#fff}
+.pill-btn{min-height:44px}
+.icon-btn{width:44px;height:44px;border-radius:22px;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;padding:0}
+.members{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.member{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:48px;font-size:11px;color:var(--sub)}
+.member.off{opacity:.35}
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  font-family:var(--round);font-weight:900;font-size:18px;color:#0B0B10;background:var(--line2)}
+.preview{height:190px;border-radius:28px;background:#000;border:3px solid var(--oshi);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex-shrink:0}
+.preview .uchiwa-text{font-size:clamp(30px,11vw,50px);text-align:center;padding:0 12px;--stroke:10px;white-space:nowrap}
+.preview-deco{position:absolute;inset:0;pointer-events:none}
+.deco-i{position:absolute}
+.chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.chip{min-height:46px;border-radius:14px;border:1px solid #33333F;background:var(--panel);font-family:var(--round);font-weight:800;font-size:14px;padding:0 4px}
+.chip[aria-pressed=true]{background:var(--oshi);border-color:var(--oshi);color:#0B0B10}
+.deco-row{display:flex;align-items:center;gap:8px}
+.deco-row .label{flex:1}
+.decos{display:flex;gap:8px}
+.deco-btn{min-height:44px;min-width:64px;border-radius:22px;border:1px solid #33333F;background:var(--panel);font-weight:700;font-size:13px;padding:0 14px}
+.deco-btn[aria-pressed=true]{background:#fff;color:#0B0B10;border-color:#fff}
+/* 小さい画面でも「掲げる」ボタンが常に見えるよう下に固定 */
+.room-actions{display:flex;flex-direction:column;gap:10px;margin-top:auto;position:sticky;bottom:0;z-index:5;background:var(--bg);margin-left:-20px;margin-right:-20px;padding:10px 20px calc(env(safe-area-inset-bottom) + 14px);margin-bottom:calc(-1 * (env(safe-area-inset-bottom) + 24px))}
+
+/* ---------- overlays ---------- */
+.overlay{position:fixed;inset:0;z-index:20}
+.overlay-uchiwa{background:#000;overflow:hidden;touch-action:none}
+.uchiwa-stage{position:absolute;left:0;top:0;width:100vw;height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center;transform-origin:0 0;--stroke:clamp(12px,2.6vw,24px)}
+/* 縦向き固定のまま横に持つ場合は、画面を90度回して描く */
+.uchiwa-stage.rot-cw{width:100vh;width:100dvh;height:100vw;transform:translateX(100vw) rotate(90deg)}
+.uchiwa-stage.rot-ccw{width:100vh;width:100dvh;height:100vw;transform:translateY(100vh) rotate(-90deg)}
+@supports (height:100dvh){.uchiwa-stage.rot-ccw{transform:translateY(100dvh) rotate(-90deg)}}
+.uchiwa-frame{position:absolute;inset:14px;border-radius:32px;border:4px solid var(--oshi);transition:border-width .12s, box-shadow .12s}
+.uchiwa-big{font-size:var(--big,120px);white-space:nowrap;letter-spacing:.02em;text-align:center;transition:transform .1s}
+.uchiwa-sync{position:absolute;top:30px;left:44px;padding:8px 14px;border-radius:999px;background:#000;border:2px solid var(--yellow);color:var(--yellow);font-family:var(--round);font-weight:900;font-size:15px}
+.uchiwa-hint{position:absolute;left:0;right:0;bottom:26px;text-align:center;font-size:13px;font-weight:700;color:var(--sub2)}
+.uchiwa-meter{position:absolute;left:0;right:0;bottom:24px;display:flex;justify-content:center;gap:6px;opacity:0;transition:opacity .3s}
+.uchiwa-meter i{width:30px;height:10px;border-radius:5px;background:var(--line2)}
+.uchiwa-meter i.on{background:var(--oshi)}
+.uchiwa-stage.hot .uchiwa-meter{opacity:1}
+.uchiwa-stage.hot .uchiwa-hint{opacity:0}
+.uchiwa-stage.flash{background:color-mix(in srgb, var(--oshi) 14%, #000)}
+.uchiwa-stage.flash .uchiwa-frame{border-width:10px;box-shadow:0 0 40px var(--oshi), inset 0 0 40px var(--oshi)}
+.uchiwa-stage.flash .uchiwa-big{transform:rotate(-3deg) scale(1.04)}
+.uchiwa-sparks,.uchiwa-deco{position:absolute;inset:0;pointer-events:none}
+.spark{position:absolute;width:30px;height:30px;animation:spark .6s ease-out forwards}
+
+.overlay-sheet{background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:480px;background:var(--panel);border-radius:24px 24px 0 0;padding:12px 16px calc(env(safe-area-inset-bottom) + 16px);display:flex;flex-direction:column;gap:6px}
+.sheet-item{min-height:54px;border:none;background:transparent;border-radius:14px;text-align:left;padding:0 14px;font-weight:700;font-size:16px}
+.sheet-item:active{background:var(--line)}
+.sheet-cancel{text-align:center;color:var(--sub)}
+.sheet-danger{color:#FF8A8A}
+.sheet-title{font-size:13px;font-weight:700;color:var(--sub);padding:6px 4px 4px}
+.sheet .color-grid{padding:0 4px 6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.invite-note{text-align:center;padding:0 8px}
+
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%);z-index:60;background:#fff;color:#0B0B10;font-weight:700;font-size:14px;padding:12px 18px;border-radius:999px;max-width:90vw;text-align:center}
+
+/* ---------- グッズ切り替え ---------- */
+.item-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+.item-tab{min-height:44px;border:none;border-radius:12px;background:transparent;color:var(--sub);font-family:var(--round);font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 4px;white-space:nowrap}
+.item-tab[aria-selected=true]{background:var(--oshi);color:#0B0B10}
+.item-tab svg{flex-shrink:0}
+
+.item-body{position:relative;display:flex;align-items:center;justify-content:center;gap:4%;width:100%;height:100%;transition:transform .1s}
+.horns-wrap{display:none;height:var(--hand,120px);flex-shrink:0}
+.horns-wrap svg{height:100%;width:auto;display:block}
+.is-horns .horns-wrap{display:block}
+
+/* メロイックサイン */
+.is-horns .preview-deco,.is-horns .uchiwa-deco{display:none}
+.preview.is-horns .uchiwa-text{font-size:clamp(26px,8vw,40px)}
+.uchiwa-stage.is-horns.flash .horns-wrap{transform:translateY(-6%) rotate(-12deg)}
+.horns-wrap{transition:transform .1s;transform-origin:50% 90%}
+
+/* ペンライト */
+.light-core,.light-ripples{display:none}
+.is-light .light-core{display:block;position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 50%, #fff 0%, color-mix(in srgb, var(--oshi) 55%, #fff) calc(6% + var(--groove,0) * 3%), var(--oshi) calc(30% + var(--groove,0) * 6%), color-mix(in srgb, var(--oshi) 30%, #000) 100%);
+  transition:filter .12s}
+.is-light .preview-deco,.is-light .uchiwa-text,.is-light .uchiwa-frame,.is-light .uchiwa-deco,.is-light .horns-wrap{display:none}
+.preview.is-light{border-color:var(--oshi)}
+.is-light .light-ripples{display:block;position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.ripple{position:absolute;left:50%;top:50%;width:40vmin;height:40vmin;margin:-20vmin 0 0 -20vmin;border-radius:50%;border:1.6vmin solid #fff;animation:ripple .7s ease-out forwards}
+.uchiwa-stage.is-light.flash .light-core{filter:brightness(1.45) saturate(1.2)}
+.uchiwa-stage.is-light .uchiwa-hint{color:rgba(11,11,16,.72)}
+.is-light .uchiwa-meter i{background:rgba(0,0,0,.25)}
+.is-light .uchiwa-meter i.on{background:#fff}
+.rainbow .light-core,.preview.rainbow .light-core{animation:hue 3s linear infinite}
+
+/* リズムがそろうと光が強くなる */
+.uchiwa-stage .uchiwa-frame{box-shadow:0 0 calc(var(--groove,0) * 9px) var(--oshi), inset 0 0 calc(var(--groove,0) * 7px) var(--oshi);border-width:calc(4px + var(--groove,0) * 1.2px)}
+.uchiwa-stage.groove-max .uchiwa-frame{animation:hue 1.6s linear infinite}
+.uchiwa-stage.groove-max .horns-wrap svg{animation:hue 1.6s linear infinite}
+.uchiwa-stage.finale{animation:finale .5s ease-out}
+
+/* 招待 */
+.invite{align-items:center;gap:14px;padding-top:24px}
+.invite-title{font-family:var(--round);font-weight:800;font-size:18px}
+.invite-qr{background:#fff;border-radius:18px;padding:10px;line-height:0}
+.invite-qr svg{width:min(64vw,260px);height:auto}
+.invite-code{font-size:14px;color:var(--sub);font-weight:700;letter-spacing:.1em}
+.invite-code span{color:#fff;font-size:28px;font-family:var(--round)}
+.invite .btn{width:100%}
+
+/* 幅の狭いスマホではタブのアイコンを省く */
+@media (max-width:360px){.item-tab svg{display:none}.chip{font-size:13px}.logo{font-size:48px}.topbar-title{font-size:15px}}
+
+@keyframes hue{to{filter:hue-rotate(360deg)}}
+@keyframes ripple{from{opacity:.9;transform:scale(.4)}to{opacity:0;transform:scale(2.6)}}
+@keyframes finale{0%{filter:brightness(1.7)}100%{filter:none}}
+@keyframes pop{from{transform:scale(.9);opacity:0}to{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes spark{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.4)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition:none !important}}
