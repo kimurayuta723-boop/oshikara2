@@ -1,18 +1,18 @@
 import { HostNet, ClientNet } from './net.js';
 import { Motion, requestMotionPermission } from './motion.js';
-import { unlockAudio, playShake, playRoll, playFinale, setSoundEnabled, isSoundEnabled } from './sound.js';
+import { unlockAudio, playShake, playRoll, playFinale, setSoundEnabled, isSoundEnabled, INSTRUMENT_NAMES, prepare } from './sound.js';
 import { qrSvg } from './qr.js';
 
 // ---------- 定数 ----------
 // 色ごとに鳴る打楽器が変わる
 const COLORS = [
   { c: '#FF3D9A', n: 'ピンク', inst: 'tambourine' },
-  { c: '#3DE0FF', n: '水色', inst: 'shaker' },
-  { c: '#B6FF3D', n: '黄緑', inst: 'bell' },
-  { c: '#B07CFF', n: '紫', inst: 'cowbell' },
-  { c: '#FFE600', n: '黄', inst: 'woodblock' },
-  { c: '#FF8A3D', n: 'オレンジ', inst: 'agogo' },
-  { c: '#FF5A5A', n: '赤', inst: 'clave' },
+  { c: '#3DE0FF', n: '水色', inst: 'maracas' },
+  { c: '#B6FF3D', n: '黄緑', inst: 'shaker' },
+  { c: '#B07CFF', n: '紫', inst: 'chimes' },
+  { c: '#FFE600', n: '黄', inst: 'sleighbells' },
+  { c: '#FF8A3D', n: 'オレンジ', inst: 'cabasa' },
+  { c: '#FF5A5A', n: '赤', inst: 'clap' },
   { c: '#3DFFB0', n: 'ミント', inst: 'triangle' },
 ];
 // 掲げられるグッズ
@@ -164,7 +164,9 @@ function renderColorGrid(gridId = 'color-grid') {
     b.setAttribute('role', 'radio');
     b.setAttribute('aria-checked', String(col.c === me.color));
     b.setAttribute('aria-label', col.n);
-    b.textContent = col.n;
+    const nm = document.createElement('span'); nm.className = 'sw-color'; nm.textContent = col.n;
+    const ins = document.createElement('span'); ins.className = 'sw-inst' + (INSTRUMENT_NAMES[col.inst].length >= 6 ? ' long' : ''); ins.textContent = INSTRUMENT_NAMES[col.inst];
+    b.append(nm, ins);
     b.addEventListener('click', () => {
       me.color = col.c; store.set('color', me.color);
       renderColorGrid(gridId); applyAccent();
@@ -182,6 +184,7 @@ async function start(role) {
   // ボタンを押したこの瞬間に、振る動きと音の許可をまとめて取る
   const motionOk = await requestMotionPermission();
   unlockAudio();
+  prepare(colorInfo(me.color).inst);
   motion.start();
   if (!motionOk) toast('この端末では振る動きを使えません。掲げた画面をタップすると鳴ります。');
 
@@ -278,7 +281,7 @@ function renderMembers() {
     const d = document.createElement('div');
     d.className = 'member' + (m.online ? '' : ' off');
     const a = document.createElement('div'); a.className = 'avatar'; a.style.background = m.color;
-    const n = document.createElement('div'); n.textContent = cid === me.cid ? '自分' : info.n;
+    const n = document.createElement('div'); n.textContent = cid === me.cid ? '自分' : INSTRUMENT_NAMES[info.inst];
     d.append(a, n);
     box.appendChild(d);
   });
@@ -487,14 +490,14 @@ function handleShake(mag, strong = false) {
 
 function handleTwist() {
   if (!ui.uchiwaOpen) return;
-  playRoll();
+  playRoll(colorInfo(me.color).inst);
   flash(false, true);
 }
 
 function finale() {
   ui.streak = 0;
   if (!ui.uchiwaOpen) return;
-  playFinale();
+  playFinale(colorInfo(me.color).inst);
   const stage = $('uchiwa-stage');
   stage.classList.remove('finale'); void stage.offsetWidth; stage.classList.add('finale');
   sparks(12);
