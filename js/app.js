@@ -1,5 +1,5 @@
 import { HostNet, ClientNet } from './net.js';
-import { Motion, requestMotionPermission } from './motion.js';
+import { Motion, requestMotionPermission, SENSITIVITY } from './motion.js';
 import { unlockAudio, playShake, playRoll, playFinale, setSoundEnabled, isSoundEnabled, INSTRUMENT_NAMES, prepare } from './sound.js';
 import { qrSvg } from './qr.js';
 
@@ -79,6 +79,7 @@ const ui = {
   item: ITEMS[store.get('item', 'uchiwa')] ? store.get('item', 'uchiwa') : 'uchiwa',
   sel: Object.fromEntries(ITEM_IDS.map((id) => [id, { phrase: ITEMS[id].phrases[0] || '', custom: '' }])),
   lightMode: store.get('lightMode', 'solid'),
+  sense: store.get('sense', 'normal'),
   deco: 'heart',
   flip: store.get('flip', false),
   uchiwaOpen: false, armed: false, armTimer: null, lowerTimer: null,
@@ -469,11 +470,13 @@ function handlePose(pose) {
   }
 }
 
-function handleShake(mag, strong = false) {
+// hit = { v: 強さ0〜1, dir: 振り切った向き, strong: 強く振ったか }
+function handleShake(hit = {}) {
   if (!ui.uchiwaOpen) return;
+  const { v = 0.5, dir = 1, strong = false } = hit;
   const now = performance.now();
   const n = now - ui.syncAt < SYNC_WINDOW + 200 ? Math.max(1, ui.syncN) : 1;
-  playShake(colorInfo(me.color).inst, n, ui.full, { accent: strong });
+  playShake(colorInfo(me.color).inst, n, ui.full, { accent: strong, v, dir }); // 音を最優先で鳴らす
   send({ t: 'shake' });
   ui.shakeTimes.push(now);
   ui.shakeTimes = ui.shakeTimes.filter((t) => now - t < 4000);
@@ -485,7 +488,7 @@ function handleShake(mag, strong = false) {
   clearTimeout(ui.finaleTimer);
   if (ui.streak >= FINALE_STREAK) ui.finaleTimer = setTimeout(finale, FINALE_GAP);
 
-  flash(strong);
+  flash(strong, false, v);
 }
 
 function handleTwist() {
@@ -511,7 +514,7 @@ function updateGroove() {
   if (iv.length >= 3) {
     const sorted = [...iv].sort((a, b) => a - b);
     const med = sorted[Math.floor(sorted.length / 2)];
-    steady = med >= 200 && med <= 1000 && iv.every((x) => Math.abs(x - med) <= med * 0.22);
+    steady = med >= 90 && med <= 1000 && iv.every((x) => Math.abs(x - med) <= med * 0.25);
   }
   ui.groove = steady ? Math.min(10, ui.groove + 1) : Math.max(0, ui.groove - 3);
   setGroove(Math.ceil(ui.groove / 2));
@@ -526,11 +529,14 @@ function setGroove(level) {
 
 let flashTimer = null;
 let heatTimer = null;
-function flash(strong = false, small = false) {
+function flash(strong = false, small = false, v = 0.5) {
   const stage = $('uchiwa-stage');
+  stage.style.setProperty('--hit', (0.4 + 0.6 * v).toFixed(2)); // 強く振るほど強く光る
+  // 速く振っても1回ずつ光るよう、毎回やり直す
+  stage.classList.remove('flash'); void stage.offsetWidth;
   stage.classList.add('flash', 'hot');
   clearTimeout(flashTimer);
-  flashTimer = setTimeout(() => stage.classList.remove('flash'), strong ? 220 : 140);
+  flashTimer = setTimeout(() => stage.classList.remove('flash'), strong ? 160 : 90);
   clearTimeout(heatTimer);
   heatTimer = setTimeout(() => { stage.classList.remove('hot'); if (performance.now() - ui.lastShakeAt > 1700) { ui.groove = 0; setGroove(0); } }, 1800);
   if (ui.item === 'light') ripple(strong);
@@ -573,6 +579,14 @@ function renderSync() {
   el.querySelector('span').textContent = ui.syncN;
   clearTimeout(renderSync.t);
   renderSync.t = setTimeout(() => { el.hidden = true; }, SYNC_WINDOW + 400);
+}
+
+// ---------- 振りの感度 ----------
+function senseInfo() { return SENSITIVITY.find((x) => x.id === ui.sense) || SENSITIVITY[1]; }
+function setSense(id) {
+  ui.sense = id; store.set('sense', id);
+  motion.setSensitivity(senseInfo().k);
+  $('m-sense').textContent = '振りの感度:' + senseInfo().label;
 }
 
 // ---------- メニュー・招待 ----------
@@ -624,7 +638,7 @@ function setupRoom() {
   document.addEventListener('click', (e) => { if (performance.now() < swallowUntil) { e.stopPropagation(); e.preventDefault(); swallowUntil = 0; } }, true);
   document.addEventListener('pointerdown', (e) => { if (!e.target.closest('#v-uchiwa')) swallowUntil = 0; }, true); // 新しく触ったら通常どおり
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => $('v-uchiwa').addEventListener(ev, () => clearTimeout(pressTimer)));
-  $('v-uchiwa').addEventListener('click', () => { if (!motion.hasSensor) handleShake(15, false); }); // センサーがない端末はタップで鳴らす
+  $('v-uchiwa').addEventListener('click', () => { if (!motion.hasSensor) handleShake({ v: 0.55 }); }); // センサーがない端末はタップで鳴らす
   $('m-color').addEventListener('click', () => { $('v-menu').hidden = true; renderColorGrid('room-color-grid'); $('v-color').hidden = false; });
   $('color-close').addEventListener('click', () => { $('v-color').hidden = true; });
   $('v-color').addEventListener('click', (e) => { if (e.target.id === 'v-color') $('v-color').hidden = true; });
@@ -638,6 +652,7 @@ function setupRoom() {
   $('invite-close').addEventListener('click', () => { $('v-invite').hidden = true; });
   $('v-invite').addEventListener('click', (e) => { if (e.target.id === 'v-invite') $('v-invite').hidden = true; });
   $('btn-menu').addEventListener('click', () => {
+    $('m-sense').textContent = '振りの感度:' + senseInfo().label;
     $('m-sound').textContent = isSoundEnabled() ? '音を消す' : '音を出す';
     $('m-leave').textContent = ui.role === 'host' ? '部屋を閉じる(全員の接続が切れます)' : '部屋を出る';
     $('v-menu').hidden = false;
@@ -646,6 +661,10 @@ function setupRoom() {
   $('v-menu').addEventListener('click', (e) => { if (e.target.id === 'v-menu') $('v-menu').hidden = true; });
   $('m-invite').addEventListener('click', () => { $('v-menu').hidden = true; invite(); });
   $('m-flip').addEventListener('click', () => { ui.flip = !ui.flip; store.set('flip', ui.flip); $('v-menu').hidden = true; toast('文字の上下を反転しました'); });
+  $('m-sense').addEventListener('click', () => {
+    const i = (SENSITIVITY.findIndex((x) => x.id === ui.sense) + 1) % SENSITIVITY.length;
+    setSense(SENSITIVITY[i].id);
+  });
   $('m-sound').addEventListener('click', () => { setSoundEnabled(!isSoundEnabled()); $('m-sound').textContent = isSoundEnabled() ? '音を消す' : '音を出す'; });
   window.addEventListener('resize', () => { if (ui.uchiwaOpen) renderUchiwa(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && ui.role) { keepAwake(); unlockAudio(); } });
@@ -653,6 +672,7 @@ function setupRoom() {
 
 setupHome();
 setupRoom();
+motion.setSensitivity(senseInfo().k);
 applyAccent();
 
 // 動作確認用(実機では使わない)

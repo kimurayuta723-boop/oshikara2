@@ -99,9 +99,9 @@ input::placeholder{color:#8A8A9E}
 .uchiwa-meter i.on{background:var(--oshi)}
 .uchiwa-stage.hot .uchiwa-meter{opacity:1}
 .uchiwa-stage.hot .uchiwa-hint{opacity:0}
-.uchiwa-stage.flash{background:color-mix(in srgb, var(--oshi) 14%, #000)}
-.uchiwa-stage.flash .uchiwa-frame{border-width:10px;box-shadow:0 0 40px var(--oshi), inset 0 0 40px var(--oshi)}
-.uchiwa-stage.flash .uchiwa-big{transform:rotate(-3deg) scale(1.04)}
+.uchiwa-stage.flash{background:color-mix(in srgb, var(--oshi) calc(var(--hit,0.6) * 24%), #000)}
+.uchiwa-stage.flash .uchiwa-frame{border-width:calc(4px + var(--hit,0.6) * 9px);box-shadow:0 0 calc(var(--hit,0.6) * 60px) var(--oshi), inset 0 0 calc(var(--hit,0.6) * 60px) var(--oshi)}
+.uchiwa-stage.flash .uchiwa-big{transform:rotate(calc(var(--hit,0.6) * -5deg)) scale(calc(1 + var(--hit,0.6) * 0.06))}
 .uchiwa-sparks,.uchiwa-deco{position:absolute;inset:0;pointer-events:none}
 .spark{position:absolute;width:30px;height:30px;animation:spark .6s ease-out forwards}
 
@@ -144,7 +144,7 @@ input::placeholder{color:#8A8A9E}
 .preview.is-light{border-color:var(--oshi)}
 .is-light .light-ripples{display:block;position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .ripple{position:absolute;left:50%;top:50%;width:40vmin;height:40vmin;margin:-20vmin 0 0 -20vmin;border-radius:50%;border:1.6vmin solid #fff;animation:ripple .7s ease-out forwards}
-.uchiwa-stage.is-light.flash .light-core{filter:brightness(1.45) saturate(1.2)}
+.uchiwa-stage.is-light.flash .light-core{filter:brightness(calc(1 + var(--hit,0.6) * 0.7)) saturate(1.2)}
 .uchiwa-stage.is-light .uchiwa-hint{color:rgba(11,11,16,.72)}
 .is-light .uchiwa-meter i{background:rgba(0,0,0,.25)}
 .is-light .uchiwa-meter i.on{background:#fff}
