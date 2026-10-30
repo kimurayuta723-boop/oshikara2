@@ -1,6 +1,6 @@
 import { HostNet, ClientNet } from './net.js';
 import { Motion, requestMotionPermission, SENSITIVITY } from './motion.js';
-import { unlockAudio, playShake, playRoll, playFinale, setSoundEnabled, isSoundEnabled, INSTRUMENT_NAMES, prepare } from './sound.js';
+import { unlockAudio, playShake, playRoll, playCheer, setSoundEnabled, isSoundEnabled, INSTRUMENT_NAMES, prepare } from './sound.js';
 import { qrSvg } from './qr.js';
 
 // ---------- 定数 ----------
@@ -49,11 +49,10 @@ const HAND_SVG = '<svg viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
   + '<rect x="40" y="160" width="112" height="34" rx="17" transform="rotate(-10 96 177)"></rect>'
   + '</g></svg>';
 const DECOS = [{ id: 'heart', label: 'ハート' }, { id: 'star', label: '星' }, { id: 'none', label: 'なし' }];
+const CHEER_INTERVAL = 5 * 60 * 1000; // ms:歓声は部屋全体で一度鳴ったら5分間は鳴らさない
 const SYNC_WINDOW = 600;   // ms:この間に振った人を「シンクロ」とみなす
 const LOWER_HOLD = 1000;   // ms:下ろした状態がこれだけ続いたら作る画面に戻る
 const ARM_HOLD = 400;      // ms:横向きがこれだけ続いたら「掲げた」
-const FINALE_STREAK = 6;   // 回:これだけ続けて振ってから止めると「ジャン!」
-const FINALE_GAP = 450;    // ms:これだけ振らなかったら「止めた」とみなす
 
 const HEART = 'M12 21s-7.5-4.6-9.5-9.2C1 8.3 3.2 5 6.6 5c2 0 3.6 1.1 5.4 3 1.8-1.9 3.4-3 5.4-3C20.8 5 23 8.3 21.5 11.8 19.5 16.4 12 21 12 21z';
 const STAR = 'M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 20.9l1.6-7L2 9.2l7.1-.6z';
@@ -84,14 +83,14 @@ const ui = {
   flip: store.get('flip', false),
   uchiwaOpen: false, armed: false, armTimer: null, lowerTimer: null,
   syncN: 1, syncAt: 0, full: 99, shakeTimes: [],
-  groove: 0, streak: 0, lastShakeAt: 0, finaleTimer: null,
+  groove: 0, lastShakeAt: 0,
   wakeLock: null,
 };
 
 // ---------- ホストの処理(ルームを作った人のスマホだけで動く) ----------
 // やることは「誰がいるか」と「シンクロした人数」を配るだけ
 const host = {
-  room: null, peerToCid: new Map(), recent: new Map(),
+  room: null, peerToCid: new Map(), recent: new Map(), lastCheer: -Infinity,
 
   init(code) { this.room = { code, members: {}, order: [] }; },
   push() { const s = this.room; deliver({ t: 'state', s }); ui.net.broadcast({ t: 'state', s }); },
@@ -115,7 +114,10 @@ const host = {
       let n = 0;
       for (const [, t] of this.recent) if (now - t <= SYNC_WINDOW) n += 1;
       const full = Math.max(2, r.order.filter((id) => r.members[id].online).length);
-      const msg = { t: 'sync', n, full };
+      // 3人以上がそろったら、部屋全体に「歓声」の合図を出す(5分に1回まで)
+      const cheer = n >= 3 && now - this.lastCheer >= CHEER_INTERVAL;
+      if (cheer) this.lastCheer = now;
+      const msg = { t: 'sync', n, full, cheer };
       deliver(msg); ui.net.broadcast(msg);
     }
   },
@@ -138,7 +140,10 @@ function send(m) {
 function deliver(m) {
   if (!m || typeof m !== 'object') return;
   if (m.t === 'state') { ui.room = m.s; render(); }
-  else if (m.t === 'sync') { ui.syncN = m.n; ui.syncAt = performance.now(); ui.full = m.full; renderSync(); }
+  else if (m.t === 'sync') {
+    ui.syncN = m.n; ui.syncAt = performance.now(); ui.full = m.full; renderSync();
+    if (m.cheer) { ui.cheers = (ui.cheers || 0) + 1; if (ui.uchiwaOpen) playCheer(m.n); }
+  }
 }
 
 // ---------- ホーム ----------
@@ -411,7 +416,7 @@ function openUchiwa() {
 
 function closeUchiwa() {
   ui.uchiwaOpen = false;
-  clearTimeout(ui.armTimer); clearTimeout(ui.lowerTimer); clearTimeout(ui.finaleTimer);
+  clearTimeout(ui.armTimer); clearTimeout(ui.lowerTimer);
   $('v-uchiwa').hidden = true;
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
 }
@@ -482,11 +487,7 @@ function handleShake(hit = {}) {
   ui.shakeTimes = ui.shakeTimes.filter((t) => now - t < 4000);
   updateGroove();
 
-  // 振り続けてから止めたら「ジャン!」
-  ui.streak = now - ui.lastShakeAt < FINALE_GAP ? ui.streak + 1 : 1;
   ui.lastShakeAt = now;
-  clearTimeout(ui.finaleTimer);
-  if (ui.streak >= FINALE_STREAK) ui.finaleTimer = setTimeout(finale, FINALE_GAP);
 
   flash(strong, false, v);
 }
@@ -495,15 +496,6 @@ function handleTwist() {
   if (!ui.uchiwaOpen) return;
   playRoll(colorInfo(me.color).inst);
   flash(false, true);
-}
-
-function finale() {
-  ui.streak = 0;
-  if (!ui.uchiwaOpen) return;
-  playFinale(colorInfo(me.color).inst);
-  const stage = $('uchiwa-stage');
-  stage.classList.remove('finale'); void stage.offsetWidth; stage.classList.add('finale');
-  sparks(12);
 }
 
 // 一定のテンポで振り続けると光が強くなる(点数はなし)

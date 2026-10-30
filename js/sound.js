@@ -99,6 +99,7 @@ function makeImpulse(seconds, decay, c = ctx) {
 
 // ---------- 合成の部品 ----------
 // 決まった値で始まる乱数(楽器の部品を毎回同じにするため)
+function hashStr(t) { let h = 2166136261; for (const c of t) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
 function seeded(seed) {
   let a = seed >>> 0;
   return () => {
@@ -109,7 +110,9 @@ function seeded(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const rnd = (a, b) => a + Math.random() * (b - a);
+// 合成に使う乱数。楽器・パターンごとに決まった値から始めるので、いつ作っても同じ音になる
+let rand = Math.random;
+const rnd = (a, b) => a + rand() * (b - a);
 
 function fadeOut(d, sr, sec) {
   const n = Math.min(d.length, Math.floor(sec * sr));
@@ -171,7 +174,7 @@ function collisions(p, sr, events, N, onHit) {
   for (let i = 0; i < N; i++) {
     while (ei < events.length && events[ei].t * sr <= i) energy += events[ei++].e;
     energy *= sysDecay;
-    if (energy > 1e-4 && Math.random() < prob) onHit(i, energy * (0.35 + 0.65 * Math.random()));
+    if (energy > 1e-4 && rand() < prob) onHit(i, energy * (0.35 + 0.65 * rand()));
   }
 }
 
@@ -214,13 +217,13 @@ export function renderShaker(p, sr, events, len = p.len) {
   const prob = p.mod ? 1 : 0;
   collisions(p, sr, events, N, (i, a) => {
     // カバサ:ビーズが溝を越える周期で、当たりやすさが波打つ
-    if (prob && Math.random() > 1 - p.mod.depth * (0.5 - 0.5 * Math.cos((2 * Math.PI * p.mod.hz * i) / sr))) return;
+    if (prob && rand() > 1 - p.mod.depth * (0.5 - 0.5 * Math.cos((2 * Math.PI * p.mod.hz * i) / sr))) return;
     hits[i] += a;
   });
   let level = 0, prev = 0;
   for (let i = 0; i < N; i++) {
     level += hits[i];
-    const input = level * (Math.random() * 2 - 1);
+    const input = level * (rand() * 2 - 1);
     level *= sndDecay;
     let sum = 0;
     for (const o of res) {
@@ -261,13 +264,13 @@ function renderMetal(p, sr, events, len) {
   const push = (i, ui, a, bright) => {
     if (i >= N) return;
     kicks.push([i, ui, a, bright]);
-    for (let j = 0; j < cl && i + j < N; j++) clicks[i + j] += a * p.click * (Math.random() * 2 - 1) * (1 - j / cl); // 当たった瞬間の「カチッ」
+    for (let j = 0; j < cl && i + j < N; j++) clicks[i + j] += a * p.click * (rand() * 2 - 1) * (1 - j / cl); // 当たった瞬間の「カチッ」
   };
   collisions(p, sr, events, N, (i, a) => {
-    const ui = Math.floor(Math.random() * p.units.length);
+    const ui = Math.floor(rand() * p.units.length);
     const bright = rnd(0.7, 1);
     push(i, ui, a, bright);
-    if (p.chatter && Math.random() < 0.7) push(i + Math.floor(sr * rnd(0.0008, 0.003)), ui, a * p.chatter, bright * 0.9);
+    if (p.chatter && rand() < 0.7) push(i + Math.floor(sr * rnd(0.0008, 0.003)), ui, a * p.chatter, bright * 0.9);
   });
   kicks.sort((x, y) => x[0] - y[0]);
   let ki = 0, pc = 0, quiet = 0;
@@ -324,14 +327,14 @@ function renderPartials(partials, sr, len, { glide = 0, glideT = 0.03 } = {}) {
       const r = Math.pow(10, -3 / (p.t60 * sr));
       const end = Math.min(N, Math.ceil(Math.log(1e-5 / Math.max(a, 1e-9)) / Math.log(r))); // 聞こえなくなったら打ち切る
       if (glide) {
-        let g = a, ph = Math.random() * 0.2;
+        let g = a, ph = rand() * 0.2;
         for (let i = 0; i < end; i++) {
           ph += (2 * Math.PI * f * (1 + glide * Math.exp(-i / (glideT * sr)))) / sr;
           out[i] += g * Math.sin(ph); g *= r;
         }
       } else {
         // 減衰する正弦波を漸化式で作る(sinを毎回計算しないので速い)
-        const w = (2 * Math.PI * f) / sr, ph = Math.random() * 0.2;
+        const w = (2 * Math.PI * f) / sr, ph = rand() * 0.2;
         const c1 = 2 * r * Math.cos(w), c2 = -r * r;
         let y2 = a * Math.sin(ph - w) / r, y1 = a * Math.sin(ph);
         out[0] += y1;
@@ -346,7 +349,7 @@ function addNoiseBurst(out, sr, at, dur, amp, { hp = false, lpHz = 0 } = {}) {
   const a = lpHz ? Math.exp((-2 * Math.PI * lpHz) / sr) : 0;
   let y = 0, px = 0;
   for (let j = 0; j < n && s + j < out.length; j++) {
-    let x = Math.random() * 2 - 1;
+    let x = rand() * 2 - 1;
     if (lpHz) { y = (1 - a) * x + a * y; x = y * 2; }
     if (hp) { const t = x - px; px = x; x = t; }
     out[s + j] += amp * x * Math.pow(1 - j / n, 2);
@@ -396,7 +399,7 @@ function renderClap(sr, strong) {
     const last = i === times.length - 1;
     const tau = (last ? rnd(0.01, 0.016) : 0.0012) * sr;
     const s = Math.floor(t * sr), amp = last ? 1 : rnd(0.55, 0.85);
-    for (let j = 0; s + j < N && j < tau * 7; j++) ex[s + j] += amp * (Math.random() * 2 - 1) * Math.exp(-j / tau);
+    for (let j = 0; s + j < N && j < tau * 7; j++) ex[s + j] += amp * (rand() * 2 - 1) * Math.exp(-j / tau);
   });
   // 手の形で決まる共鳴(手のひらを平らに=明るい、くぼませる=こもる)
   const f = strong ? rnd(1300, 1800) : rnd(950, 1500);
@@ -414,50 +417,120 @@ function renderClap(sr, strong) {
   return out;
 }
 
-// フレームドラムの「ドン」:張った皮の響き(円い膜の倍音比 1 : 1.59 : 2.14 : 2.30 : 2.65 : 2.92)。
-// たたいた直後は皮が張って音程がわずかに高く、すぐ落ち着く。スマホでも聞こえるよう基音はやや高め
-function renderDrum(sr) {
-  const f1 = 165;
-  const partials = [[1, 1, 0.38], [1.594, 0.55, 0.24], [2.136, 0.4, 0.18], [2.296, 0.3, 0.15], [2.653, 0.22, 0.12], [2.918, 0.15, 0.1]]
-    .map(([k, a, t]) => ({ f: f1 * k * rnd(0.99, 1.01), a, t60: t }));
-  const d = renderPartials(partials, sr, 0.5, { glide: 0.07, glideT: 0.03 });
-  addNoiseBurst(d, sr, 0, 0.008, 0.5, { lpHz: 2500 }); // 手が皮に当たる音
-  fadeOut(d, sr, 0.05);
-  return d;
+// ---------- 歓声(人の声の仕組みをまねて合成) ----------
+// 1人ぶんの声:声帯の振動(のこぎり波)を、口の形で決まる共鳴(フォルマント)に通す。
+// 「わー」は口を大きく開けた「あ」、「きゃー」は「い」寄りから「あ」へ口が開いていく。
+// 音程はわずかに上がってから下がり、ビブラートと息の音を加える
+const VOWELS = {
+  a_m: [[750, 90], [1150, 110], [2500, 160]],
+  a_f: [[950, 110], [1450, 130], [2900, 200]],
+  i_f: [[400, 70], [2400, 150], [3200, 220]],
+};
+function renderVoice(out, sr, at, { f0, female, dur, amp }) {
+  const N = out.length, s0 = Math.floor(at * sr), n = Math.floor(dur * sr);
+  const A = VOWELS[female ? 'a_f' : 'a_m'], I = female ? VOWELS.i_f : VOWELS.a_m;
+  const W = [1, 0.7, 0.35];
+  const c1 = new Float64Array(3), c2 = new Float64Array(3), cg = new Float64Array(3);
+  const y1 = new Float64Array(3), y2 = new Float64Array(3);
+  const setMouth = (m) => { // 口の形(0=「い」, 1=「あ」)に合わせた共鳴の係数
+    for (let k = 0; k < 3; k++) {
+      const F = I[k][0] + (A[k][0] - I[k][0]) * m, r = Math.exp((-Math.PI * A[k][1]) / sr);
+      c1[k] = 2 * r * Math.cos((2 * Math.PI * F) / sr); c2[k] = -r * r; cg[k] = 1 - r;
+    }
+  };
+  setMouth(female ? 0 : 1);
+  const vib = rnd(4.8, 6.2), vibD = rnd(0.008, 0.02), jit = rnd(0.002, 0.006);
+  const att = rnd(0.07, 0.18) * sr, rel = rnd(0.25, 0.45) * sr, open = 0.15 * sr;
+  const vw = (2 * Math.PI * vib) / sr;
+  let ph = 0, lp = 0;
+  for (let j = 0; j < n && s0 + j < N; j++) {
+    if (female && j < open && (j & 63) === 0) setMouth(j / open); // きゃーは「い」から「あ」へ開く
+    const x = j / n;
+    // 音程:出だしで少し上がり、最後に下がる
+    const bend = 1 + 0.06 * Math.min(1, j / (0.12 * sr)) - (x > 0.6 ? 0.25 * (x - 0.6) : 0);
+    const f = f0 * bend * (1 + vibD * Math.sin(vw * j) + jit * (rand() * 2 - 1));
+    ph += f / sr; if (ph >= 1) ph -= 1;
+    lp += (2 * ph - 1 - lp) * 0.35;                // 声帯の音(高音ほど弱い)
+    const src = lp + (rand() * 2 - 1) * 0.12;      // 息の音
+    let y = 0;
+    for (let k = 0; k < 3; k++) {
+      const v = cg[k] * src + c1[k] * y1[k] + c2[k] * y2[k];
+      y2[k] = y1[k]; y1[k] = v; y += v * W[k];
+    }
+    out[s0 + j] += y * Math.min(1, j / att) * Math.min(1, (n - j) / rel) * amp;
+  }
+}
+// 大勢の歓声:男女の声を少しずつずらして重ね、会場のざわめきを下に敷く
+function renderCheer(sr, variant) {
+  const len = 2.0, N = Math.floor(len * sr);
+  const out = new Float32Array(N);
+  const voices = 20;
+  for (let i = 0; i < voices; i++) {
+    const female = i % 3 !== 0;
+    renderVoice(out, sr, rnd(0, 0.35), {
+      f0: female ? rnd(330, 620) : rnd(120, 230),
+      female, dur: rnd(0.9, 1.55), amp: rnd(0.5, 1) * (female ? 0.9 : 1.2),
+    });
+  }
+  // ざわめき:人の声の帯域の雑音が、ゆっくり波打つ
+  let b1 = 0, b2 = 0;
+  for (let i = 0; i < N; i++) {
+    const t = i / sr;
+    const x = rand() * 2 - 1;
+    b1 += (x - b1) * 0.12; b2 += (b1 - b2) * 0.12; // こもった雑音
+    const swell = Math.min(1, t / 0.2) * Math.min(1, (len - t) / 0.7);
+    out[i] += (b1 - b2) * 3.2 * swell * (0.8 + 0.2 * Math.sin(2 * Math.PI * 1.7 * t + variant));
+  }
+  fadeOut(out, sr, 0.3);
+  return out;
 }
 
 // ---------- 楽器ごとの音一式(初めて使うときに作って保存) ----------
 // level:ふつう=1 / 強く=1.5 / ロール=0.9 をそれぞれ同じ基準でそろえる
+// 強く振ったときの大きさ(ふつう=1)。最終出力で楽器どうしがそろうよう測って決めた値
+const STRONG_LV = { maracas: 2.0, tambourine: 1.8, cabasa: 1.65, clap: 1.65, triangle: 1.65, sleighbells: 1.5, shaker: 1.5 };
 function getSet(name) {
+  const SL = STRONG_LV[name] || 1.5;
   const sr = ctx.sampleRate, key = name + '@' + sr;
   if (cache.has(key)) return cache.get(key);
   const B = (d, level, crest) => toBuffer(normalize(d, sr, level, crest), sr);
+  let k = 0;
+  const seedNext = () => { rand = seeded(hashStr(name) * 131 + (k++) * 7919); };
   let set;
   if (SEEDS[name]) {
     const p = SEEDS[name];
-    const mk = (strong) => B(renderShaker(p, sr, shakeEvents(strong, p.rebound), strong ? p.len * 1.3 : p.len), strong ? 1.5 : 1, 2.0);
-    set = { normal: [mk(false), mk(false), mk(false), mk(false)], strong: [mk(true), mk(true)], roll: B(renderShaker(p, sr, ROLL_EVENTS, 0.45), 0.9, 2.0) };
+    const mk = (strong) => (seedNext(), B(renderShaker(p, sr, shakeEvents(strong, p.rebound), strong ? p.len * 1.3 : p.len), strong ? SL : 1, 2.0));
+    set = { normal: [mk(false), mk(false), mk(false), mk(false)], strong: [mk(true), mk(true)], roll: (seedNext(), B(renderShaker(p, sr, ROLL_EVENTS, 0.45), 0.9, 2.0)) };
   } else if (name === 'tambourine' || name === 'sleighbells') {
     const p = name === 'tambourine' ? tambourineSpec() : sleighSpec();
     const crest = name === 'tambourine' ? 3.0 : 0;
-    const mk = (strong) => B(renderMetal(p, sr, shakeEvents(strong, p.rebound), strong ? p.len * 1.2 : p.len), strong ? 1.5 : 1, crest);
-    set = { normal: [mk(false), mk(false), mk(false), mk(false)], strong: [mk(true), mk(true)], roll: B(renderMetal(p, sr, ROLL_EVENTS, p.len), 0.9, crest) };
+    const mk = (strong) => (seedNext(), B(renderMetal(p, sr, shakeEvents(strong, p.rebound), strong ? p.len * 1.2 : p.len), strong ? SL : 1, crest));
+    set = { normal: [mk(false), mk(false), mk(false), mk(false)], strong: [mk(true), mk(true)], roll: (seedNext(), B(renderMetal(p, sr, ROLL_EVENTS, p.len), 0.9, crest)) };
   } else if (name === 'clap') {
-    const mk = (strong) => B(renderClap(sr, strong), strong ? 1.5 : 1, 2.2);
+    const mk = (strong) => (seedNext(), B(renderClap(sr, strong), strong ? SL : 1, 2.2));
     set = { normal: [mk(false), mk(false), mk(false), mk(false), mk(false), mk(false)], strong: [mk(true), mk(true), mk(true)] };
   } else if (name === 'triangle') {
-    set = { normal: [B(renderTriangle(sr, false, 0), 1), B(renderTriangle(sr, false, 1), 1)], strong: [B(renderTriangle(sr, true, 0), 1.5)] };
+    set = { normal: [(seedNext(), B(renderTriangle(sr, false, 0), 1)), (seedNext(), B(renderTriangle(sr, false, 1), 1))], strong: [(seedNext(), B(renderTriangle(sr, true, 0), SL))] };
   } else if (name === 'chimes') {
     set = { notes: new Map() }; // 音ごとに、必要になったときに作る
-  } else if (name === 'drum') {
-    set = { normal: [B(renderDrum(sr), 1), B(renderDrum(sr), 1)] };
   }
+  rand = Math.random;
   cache.set(key, set);
   return set;
 }
+// 歓声は作るのに少し時間がかかるので、2パターンを1つずつ、手の空いたときに作る
+const cheerBufs = [];
+function makeCheer() {
+  const sr = ctx.sampleRate, i = cheerBufs.length;
+  if (i >= 2) return;
+  rand = seeded(9001 + i * 31);
+  cheerBufs.push(toBuffer(normalize(renderCheer(sr, i), sr, 1), sr));
+  rand = Math.random;
+}
 function chimeBuf(f) {
   const set = getSet('chimes');
-  if (!set.notes.has(f)) set.notes.set(f, toBuffer(normalize(renderChime(ctx.sampleRate, f), ctx.sampleRate, 1), ctx.sampleRate));
+  if (!set.notes.has(f)) rand = seeded(Math.round(f) * 17), set.notes.set(f, toBuffer(normalize(renderChime(ctx.sampleRate, f), ctx.sampleRate, 1), ctx.sampleRate));
+  rand = Math.random;
   return set.notes.get(f);
 }
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -501,19 +574,8 @@ function track(name, g, t, dur) {
   active.set(name, list);
 }
 
-// 何人かの手拍子(ばらけたタイミング)
-function crowdClap(t, out, n = 3) {
-  const set = getSet('clap');
-  for (let i = 0; i < n; i++) playBuffer(pick(set.normal), t + rnd(0, 0.022), out, rnd(0.96, 1.04), rnd(0.5, 0.8));
-}
-function frameDrum(t, out, strength = 1) { playBuffer(pick(getSet('drum').normal), t, out, rnd(0.98, 1.02), strength); }
-// ベルツリー(上から下へ流れるチャイム)
-function bellTree(t, out, peak = 1) {
-  [...CHIME_NOTES].reverse().forEach((f, i) => playBuffer(chimeBuf(f), t + i * 0.045, out, 1, peak * 0.55 * (1 - i * 0.05)));
-}
-
 // 最終出力で、聞こえ方の大きさがそろうよう測って決めた補正(dB)
-const LEVEL_DB = { tambourine: 1.0, maracas: 6.0, shaker: 0.7, sleighbells: -2.6, cabasa: 5.4, clap: 3.6, chimes: -1.0, triangle: -0.4 };
+const LEVEL_DB = { tambourine: 1.0, maracas: 6.8, shaker: 1.3, sleighbells: -3.1, cabasa: 5.4, clap: 3.6, chimes: -1.0, triangle: -0.4 };
 
 // dir:振り切った向き(+1/-1)。粒の楽器は行きと帰りで少し音が違う(シャッ・カッ)
 let lastChime = 0;
@@ -525,7 +587,7 @@ function hit(name, t, out, strong, dir = 1) {
     for (let i = 0; i < n; i++) {
       let f; do { f = pick(CHIME_NOTES); } while (f === lastChime);
       lastChime = f;
-      playBuffer(chimeBuf(f), t + i * rnd(0.05, 0.07), out, 1, strong ? 0.75 : 1);
+      playBuffer(chimeBuf(f), t + i * rnd(0.05, 0.07), out, 1, strong ? 0.85 : 1);
     }
     return 3.2;
   }
@@ -542,18 +604,17 @@ function hit(name, t, out, strong, dir = 1) {
 // 最初の一振りが遅れないよう、使う楽器の音を先に作っておく
 export function prepare(instrument) {
   if (!ctx) return;
-  const names = [instrument, 'drum', 'clap', 'tambourine', 'sleighbells'].filter((n, i, a) => a.indexOf(n) === i);
-  names.forEach((n, i) => setTimeout(() => { if (n === 'chimes') CHIME_NOTES.forEach((f, j) => setTimeout(() => chimeBuf(f), j * 40)); else getSet(n); }, i * 80));
-  setTimeout(() => CHIME_NOTES.forEach((f, j) => setTimeout(() => chimeBuf(f), j * 40)), names.length * 80 + 200); // ベルツリー用
+  if (instrument === 'chimes') CHIME_NOTES.forEach((f, j) => setTimeout(() => chimeBuf(f), j * 40));
+  else setTimeout(() => getSet(instrument), 0);
+  setTimeout(makeCheer, 400); setTimeout(makeCheer, 1200); // 歓声(3人以上で振ったとき)
 }
-let lastTree = 0;
 
 // n = 0.6秒以内に一緒に振った人数(自分を含む), full = 全員そろったとみなす人数
 // v = 振りの強さ(0〜1)。音量と音の明るさが連続的に変わる
-// accent = 強く振ったとき(大きめの一発+フレームドラムの「ドン」) / dir = 振り切った向き
+// accent = 強く振ったとき(楽器を強く鳴らしたときの音) / dir = 振り切った向き
 export function playShake(instrument, n = 1, full = 99, { accent = false, v = 0.5, dir = 1 } = {}) {
   if (!enabled || !ctx) return;
-  if (ctx.state === 'suspended') ctx.resume();
+  if (ctx.state === 'suspended' && !(ctx instanceof OfflineAudioContext)) ctx.resume();
   const t = ctx.currentTime; // すぐ鳴らす
   const sync = Math.min(1, 0.5 + 0.13 * (n - 1)) / 0.5;    // シンクロで大きく(1人=1倍)
   const dyn = 0.24 + 0.92 * Math.pow(v, 1.15);             // 弱い振り≈-12dB 〜 強い振り≈+1.3dB(差をしっかり残す)
@@ -565,12 +626,23 @@ export function playShake(instrument, n = 1, full = 99, { accent = false, v = 0.
   tone.connect(out);
   const dur = hit(instrument, t, tone, accent, dir);
   track(instrument, out, t, dur);
-  if (accent) frameDrum(t, voice(0.8, 0, 0.6), 0.9);
-  if (n >= 3) crowdClap(t, voice(0.55, rnd(-0.4, 0.4)), Math.min(5, n - 1)); // 3人以上で手拍子
-  if (n >= 2 && n >= full && t - lastTree > 1.5) {  // 全員そろったらベルツリー
-    lastTree = t;
-    bellTree(t + 0.02, voice(0.9, 0, 1.3), 1);
-  }
+}
+
+// 3人以上で振ったときの歓声(部屋を作った人のスマホが合図を出し、5分に1回だけ鳴る)
+// 楽器より控えめの大きさ。人数が多いほど少し大きく
+export const CHEER = { level: 0.135 };
+export function playCheer(n = 3) {
+  if (!enabled || !ctx) return;
+  cheer(ctx.currentTime, n);
+}
+function cheer(t, n) {
+  const g = Math.min(1.3, 1 + 0.1 * (n - 3)) * CHEER.level;
+  const out = voice(g, rnd(-0.15, 0.15), 1.8); // 会場らしく残響を多めに
+  if (!cheerBufs.length) { setTimeout(makeCheer, 0); return; } // まだ作っていなければ、今回は見送って作り始める
+  const s = playBuffer(pick(cheerBufs), t, out, rnd(0.97, 1.03));
+  out.gain.setValueAtTime(0, t);
+  out.gain.linearRampToValueAtTime(g, t + 0.12);   // ふわっと立ち上がる
+  return s;
 }
 
 // 手首をひねったとき:シャカシャカ(シェイカーのロール)
@@ -579,17 +651,6 @@ export function playRoll(instrument) {
   const t = ctx.currentTime;
   const name = SEEDS[instrument] || instrument === 'tambourine' || instrument === 'sleighbells' ? instrument : 'shaker';
   playBuffer(getSet(name).roll, t, voice(0.75, rnd(-0.2, 0.2)), rnd(0.97, 1.03));
-}
-
-// 振り続けて止めたとき:締めの「ジャン!」
-export function playFinale(instrument) {
-  if (!enabled || !ctx) return;
-  const t = ctx.currentTime;
-  frameDrum(t, voice(1, 0, 0.7), 1.1);
-  hit(instrument, t, voice(1.1, 0), true);
-  if (instrument !== 'tambourine') playBuffer(getSet('tambourine').strong[0], t + 0.005, voice(0.7, -0.2));
-  if (instrument !== 'sleighbells') playBuffer(getSet('sleighbells').strong[1], t + 0.01, voice(0.55, 0.25));
-  bellTree(t + 0.06, voice(0.8, 0, 1.4), 0.8);
 }
 
 // 開発用:楽器1音をオフラインで録音して返す(音量合わせの測定に使う。アプリからは呼ばない)
@@ -615,7 +676,7 @@ export async function __measureFull(name, opts = {}) {
   const off = new OfflineAudioContext(2, sr * 2, sr);
   ctx = off; ({ dry: dryBus, wet: wetSend } = buildMaster(off));
   try {
-    if (opts.finale) playFinale(name); else playShake(name, opts.n || 1, opts.full || 99, opts);
+    if (opts.cheerOnly) { cheer(0, opts.n || 3); } else playShake(name, opts.n || 1, opts.full || 99, opts);
     const buf = await off.startRendering();
     const L = buf.getChannelData(0), R = buf.getChannelData(1);
     let peak = 0; for (let i = 0; i < L.length; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
@@ -634,4 +695,11 @@ export async function __renderSeq(name, off) {
     const buf = await off.startRendering();
     return Array.from(buf.getChannelData(0).filter((_, i) => i % 1 === 0));
   } finally { [ctx, dryBus, wetSend] = saved; }
+}
+
+// 開発用:歓声の合成時間と波形を返す
+export function __cheer() {
+  cheerBufs.length = 0;
+  const t0 = performance.now(); makeCheer(); const ms = performance.now() - t0; makeCheer();
+  return { ms, data: Array.from(cheerBufs[0].getChannelData(0)), sr: cheerBufs[0].sampleRate };
 }

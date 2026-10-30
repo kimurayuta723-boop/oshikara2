@@ -154,7 +154,6 @@ input::placeholder{color:#8A8A9E}
 .uchiwa-stage .uchiwa-frame{box-shadow:0 0 calc(var(--groove,0) * 9px) var(--oshi), inset 0 0 calc(var(--groove,0) * 7px) var(--oshi);border-width:calc(4px + var(--groove,0) * 1.2px)}
 .uchiwa-stage.groove-max .uchiwa-frame{animation:hue 1.6s linear infinite}
 .uchiwa-stage.groove-max .horns-wrap svg{animation:hue 1.6s linear infinite}
-.uchiwa-stage.finale{animation:finale .5s ease-out}
 
 /* 招待 */
 .invite{align-items:center;gap:14px;padding-top:24px}
@@ -170,7 +169,6 @@ input::placeholder{color:#8A8A9E}
 
 @keyframes hue{to{filter:hue-rotate(360deg)}}
 @keyframes ripple{from{opacity:.9;transform:scale(.4)}to{opacity:0;transform:scale(2.6)}}
-@keyframes finale{0%{filter:brightness(1.7)}100%{filter:none}}
 @keyframes pop{from{transform:scale(.9);opacity:0}to{transform:none;opacity:1}}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @keyframes spark{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.4)}}
