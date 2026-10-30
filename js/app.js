@@ -145,7 +145,7 @@ function setupHome() {
   const params = new URLSearchParams(location.search);
   if (params.get('room')) {
     $('in-code').value = params.get('room').replace(/\D/g, '').slice(0, 4);
-    homeMsg(`部屋 ${$('in-code').value} に招待されています。色を選んで「参加する」を押してください`);
+    homeMsg(`部屋 ${$('in-code').value} に招待されています。色を選んで「参加する」を押してください。`);
   }
   renderColorGrid();
   $('btn-host').addEventListener('click', () => start('host'));
@@ -177,16 +177,16 @@ function renderColorGrid(gridId = 'color-grid') {
 
 async function start(role) {
   const code = $('in-code').value.replace(/\D/g, '');
-  if (role === 'client' && code.length !== 4) { homeMsg('4桁の部屋コードを入れてください'); $('in-code').focus(); return; }
+  if (role === 'client' && code.length !== 4) { homeMsg('4桁の部屋コードを入力してください。'); $('in-code').focus(); return; }
 
   // ボタンを押したこの瞬間に、振る動きと音の許可をまとめて取る
   const motionOk = await requestMotionPermission();
   unlockAudio();
   motion.start();
-  if (!motionOk) toast('振る動きが使えません(タップで代用できます)');
+  if (!motionOk) toast('この端末では振る動きを使えません。掲げた画面をタップすると鳴ります。');
 
   setBusy(true);
-  homeMsg(role === 'host' ? 'ルームを作っています…' : '接続しています…');
+  homeMsg(role === 'host' ? '部屋を作っています…' : '接続しています…');
   try {
     if (role === 'host') {
       const net = new HostNet({
@@ -211,8 +211,8 @@ async function start(role) {
     ui.role = null;
     const t = e && e.type;
     homeMsg(t === 'peer-unavailable' || (e && e.message === 'timeout')
-      ? '部屋が見つかりません。コードを確かめてください'
-      : '接続できませんでした。電波の良い場所でもう一度お試しください');
+      ? '部屋が見つかりません。部屋コードを確かめてください。'
+      : 'つながりませんでした。電波の良い場所で、もう一度お試しください。');
   } finally {
     setBusy(false);
   }
@@ -235,7 +235,7 @@ async function reconnect() {
     try { await connectClient(ui.code); toast('つながりました'); reconnecting = false; return; } catch (e) { /* retry */ }
   }
   reconnecting = false;
-  toast('つながりませんでした。ルームを作った人のスマホを確認してください');
+  toast('つながりませんでした。部屋を作った人のスマホでアプリが開いているか確かめてください。');
 }
 
 function setBusy(b) { $('btn-host').disabled = b; $('btn-join').disabled = b; }
@@ -437,8 +437,8 @@ function renderUchiwa() {
   stage.style.setProperty('--big', big + 'px');
   stage.style.setProperty('--stroke', Math.max(8, Math.round(big * 0.17)) + 'px');
   $('uchiwa-hint').textContent = !motion.hasSensor
-    ? 'タップで戻る(この端末は振る動きに対応していません)'
-    : ui.item === 'light' ? '振って鳴らす ・ 寝かせるか長押しで戻ります' : '振って鳴らす ・ 下ろすか長押しで戻ります';
+    ? 'タップで鳴ります ・ 長押しで戻ります'
+    : ui.item === 'light' ? '振ると鳴ります ・ 寝かせるか長押しで戻ります' : '振ると鳴ります ・ 下ろすか長押しで戻ります';
 }
 
 function armSoon() {
@@ -585,9 +585,9 @@ function invite() {
 
 function shareLink() {
   const url = inviteUrl();
-  const text = `推しカラの部屋コードは ${ui.code} です`;
+  const text = `推しカラの部屋に招待します(部屋コード ${ui.code})`;
   if (navigator.share) navigator.share({ title: '推しカラ', text, url }).catch(() => {});
-  else copy(url, `招待リンクをコピーしました(コード ${ui.code})`);
+  else copy(url, `招待リンクをコピーしました(部屋コード ${ui.code})`);
 }
 
 function copy(text, msg) {
@@ -610,11 +610,18 @@ function setupRoom() {
   document.querySelectorAll('.js-hand').forEach((el) => { el.innerHTML = HAND_SVG; }); // 固定のイラスト
   $('in-free').addEventListener('input', (e) => { sel().custom = clean(e.target.value, ITEMS[ui.item].max); renderMaker(); });
   $('btn-raise').addEventListener('click', openUchiwa);
-  // センサーがない端末はタップ、ある端末でも長押し(0.6秒)で確実に戻れるように
+  // 長押し(0.6秒)でいつでも確実に戻れるように
   let pressTimer = null;
-  $('v-uchiwa').addEventListener('pointerdown', () => { clearTimeout(pressTimer); pressTimer = setTimeout(closeUchiwa, 600); });
+  let swallowUntil = 0;
+  $('v-uchiwa').addEventListener('pointerdown', () => {
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => { swallowUntil = performance.now() + 800; closeUchiwa(); }, 600);
+  });
+  // 長押しで戻った直後、指を離したときのクリックが下のボタンに当たらないようにする
+  document.addEventListener('click', (e) => { if (performance.now() < swallowUntil) { e.stopPropagation(); e.preventDefault(); swallowUntil = 0; } }, true);
+  document.addEventListener('pointerdown', (e) => { if (!e.target.closest('#v-uchiwa')) swallowUntil = 0; }, true); // 新しく触ったら通常どおり
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => $('v-uchiwa').addEventListener(ev, () => clearTimeout(pressTimer)));
-  $('v-uchiwa').addEventListener('click', () => { if (!motion.hasSensor) closeUchiwa(); });
+  $('v-uchiwa').addEventListener('click', () => { if (!motion.hasSensor) handleShake(15, false); }); // センサーがない端末はタップで鳴らす
   $('m-color').addEventListener('click', () => { $('v-menu').hidden = true; renderColorGrid('room-color-grid'); $('v-color').hidden = false; });
   $('color-close').addEventListener('click', () => { $('v-color').hidden = true; });
   $('v-color').addEventListener('click', (e) => { if (e.target.id === 'v-color') $('v-color').hidden = true; });
@@ -628,15 +635,15 @@ function setupRoom() {
   $('invite-close').addEventListener('click', () => { $('v-invite').hidden = true; });
   $('v-invite').addEventListener('click', (e) => { if (e.target.id === 'v-invite') $('v-invite').hidden = true; });
   $('btn-menu').addEventListener('click', () => {
-    $('m-sound').textContent = '音:' + (isSoundEnabled() ? 'オン' : 'オフ');
+    $('m-sound').textContent = isSoundEnabled() ? '音を消す' : '音を出す';
     $('m-leave').textContent = ui.role === 'host' ? '部屋を閉じる(全員の接続が切れます)' : '部屋を出る';
     $('v-menu').hidden = false;
   });
   $('m-close').addEventListener('click', () => { $('v-menu').hidden = true; });
   $('v-menu').addEventListener('click', (e) => { if (e.target.id === 'v-menu') $('v-menu').hidden = true; });
   $('m-invite').addEventListener('click', () => { $('v-menu').hidden = true; invite(); });
-  $('m-flip').addEventListener('click', () => { ui.flip = !ui.flip; store.set('flip', ui.flip); $('v-menu').hidden = true; toast('掲げたときの文字の向きを反転しました'); });
-  $('m-sound').addEventListener('click', () => { setSoundEnabled(!isSoundEnabled()); $('m-sound').textContent = '音:' + (isSoundEnabled() ? 'オン' : 'オフ'); });
+  $('m-flip').addEventListener('click', () => { ui.flip = !ui.flip; store.set('flip', ui.flip); $('v-menu').hidden = true; toast('文字の上下を反転しました'); });
+  $('m-sound').addEventListener('click', () => { setSoundEnabled(!isSoundEnabled()); $('m-sound').textContent = isSoundEnabled() ? '音を消す' : '音を出す'; });
   window.addEventListener('resize', () => { if (ui.uchiwaOpen) renderUchiwa(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && ui.role) { keepAwake(); unlockAudio(); } });
 }

@@ -1,7 +1,7 @@
 {
   "name": "推しカラ",
   "short_name": "推しカラ",
-  "description": "カラオケをライブ会場にする、うちわとファンサのアプリ",
+  "description": "振るだけで鳴る、おうちカラオケの応援グッズ(うちわ・メロイック・ペンライト)",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -20,16 +20,17 @@
 </head>
 <body>
 
-<!-- ホーム:色を選ぶ → ルームを作る / 参加する -->
+<!-- ホーム:色を選ぶ → 部屋を作る / 参加する -->
 <main id="s-home" class="screen is-active">
   <div class="home-hero">
     <div class="logo">推しカラ</div>
-    <p class="tagline">振って鳴らす、うちわとメロイック。</p>
+    <p class="tagline">振るだけで鳴る、おうちカラオケの応援グッズ。</p>
   </div>
 
   <div class="field">
-    <div class="label">自分の色(色ごとに打楽器の音が変わります)</div>
-    <div id="color-grid" class="color-grid" role="radiogroup" aria-label="メンバーカラー"></div>
+    <div class="label">あなたの色</div>
+    <div id="color-grid" class="color-grid" role="radiogroup" aria-label="あなたの色"></div>
+    <p class="fine">色ごとに鳴る楽器が違います。タップすると音を試せます。</p>
   </div>
 
   <div class="home-actions">
@@ -42,15 +43,15 @@
       <p id="home-msg" class="msg" role="status"></p>
     </div>
     <div class="or">または</div>
-    <button id="btn-host" class="btn btn-ghost">ルームを作る</button>
+    <button id="btn-host" class="btn btn-ghost">部屋を作る</button>
   </div>
-  <p class="fine">参加するとき、振る動きと音の許可を求められます。iPhoneはマナーモードを解除してください。</p>
+  <p class="fine">始めるときに「動作と方向」へのアクセスを求められたら、「許可」を選んでください。iPhoneはマナーモードを解除すると音が鳴ります。</p>
 </main>
 
-<!-- ルーム:うちわ・メロイックを作る -->
+<!-- 部屋:うちわ・メロイック・ペンライトを選ぶ -->
 <main id="s-room" class="screen">
   <header class="topbar">
-    <button id="btn-invite" class="pill pill-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><path d="M14 14h3v3h-3zM18 18h3v3h-3z"></path></svg><span class="sr">招待 </span>ROOM <span id="room-code">----</span></button>
+    <button id="btn-invite" class="pill pill-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><path d="M14 14h3v3h-3zM18 18h3v3h-3z"></path></svg><span class="sr">QRコードで招待 </span>ROOM <span id="room-code">----</span></button>
     <div class="topbar-title" id="maker-title">推しカラ</div>
     <button id="btn-menu" class="icon-btn" aria-label="メニュー">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg>
@@ -76,7 +77,7 @@
   </div>
 
   <div class="field" id="free-field">
-    <label for="in-free">自由に書く</label>
+    <label for="in-free">好きな言葉を書く</label>
     <input id="in-free" type="text" maxlength="10" placeholder="例:最高!" autocomplete="off">
   </div>
 
@@ -89,7 +90,7 @@
     <div class="label">光り方</div>
     <div id="light-modes" class="decos"></div>
   </div>
-  <p class="fine" id="light-note" hidden>部屋を暗くすると、ライブ会場っぽくなります。</p>
+  <p class="fine" id="light-note" hidden>照明を落とすと、ライブ会場らしくなります。</p>
 
 
   <div class="room-actions">
@@ -114,17 +115,17 @@
       <div class="uchiwa-big uchiwa-text" id="uchiwa-big">ピースして</div>
     </div>
     <div class="uchiwa-meter" id="uchiwa-meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-    <div class="uchiwa-hint" id="uchiwa-hint">振って鳴らす ・ 下ろすと戻ります</div>
+    <div class="uchiwa-hint" id="uchiwa-hint">振ると鳴ります ・ 下ろすか長押しで戻ります</div>
   </div>
 </div>
 
 <!-- 招待(QRコード) -->
 <div id="v-invite" class="overlay overlay-sheet" hidden>
   <div class="sheet invite" role="dialog" aria-label="メンバーを招待">
-    <div class="invite-title">カメラで読み取って参加</div>
+    <div class="invite-title">カメラで読み取ると参加できます</div>
     <div class="invite-qr" id="invite-qr"></div>
     <div class="invite-code">ROOM <span id="invite-code">----</span></div>
-    <p class="fine invite-note" id="invite-note" hidden>この部屋はあなたのスマホでつながっています。アプリを閉じると部屋が終わります。</p>
+    <p class="fine invite-note" id="invite-note" hidden>この部屋はあなたのスマホを通してつながっています。アプリを閉じると、部屋も終わります。</p>
     <button class="btn btn-ghost" id="btn-share-link">リンクを送る</button>
     <button class="sheet-item sheet-cancel" id="invite-close">閉じる</button>
   </div>
@@ -132,8 +133,8 @@
 
 <!-- 色を変える -->
 <div id="v-color" class="overlay overlay-sheet" hidden>
-  <div class="sheet" role="dialog" aria-label="自分の色を変える">
-    <div class="sheet-title">自分の色(タップで音を試せます)</div>
+  <div class="sheet" role="dialog" aria-label="色を変える">
+    <div class="sheet-title">色を選ぶと、その楽器の音が鳴ります</div>
     <div id="room-color-grid" class="color-grid" role="radiogroup" aria-label="自分の色"></div>
     <button class="sheet-item sheet-cancel" id="color-close">閉じる</button>
   </div>
@@ -142,10 +143,10 @@
 <!-- メニュー -->
 <div id="v-menu" class="overlay overlay-sheet" hidden>
   <div class="sheet" role="dialog" aria-label="メニュー">
-    <button class="sheet-item" id="m-invite">メンバーを招待する(QRコード)</button>
-    <button class="sheet-item" id="m-color">自分の色を変える</button>
-    <button class="sheet-item" id="m-flip">掲げたときの文字の向きを反転</button>
-    <button class="sheet-item" id="m-sound">音:オン</button>
+    <button class="sheet-item" id="m-invite">QRコードで招待する</button>
+    <button class="sheet-item" id="m-color">色を変える</button>
+    <button class="sheet-item" id="m-flip">掲げたときの文字の上下を反転する</button>
+    <button class="sheet-item" id="m-sound">音を消す</button>
     <button class="sheet-item sheet-danger" id="m-leave">部屋を出る</button>
     <button class="sheet-item sheet-cancel" id="m-close">閉じる</button>
   </div>
