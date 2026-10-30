@@ -16,9 +16,9 @@ const cache = new Map(); // 楽器ごとの合成済みバッファ
 // res:共鳴(f=周波数, r=響きの長さ, g=音量, rand=当たるたびの音程の揺れ)
 // rebound:振り返しで粒がもう一度当たる強さ / len:秒
 const SHAKERS = {
-  maracas: {
-    objects: 25, soundDecay: 0.95, systemDecay: 0.999, rebound: 0.45, len: 0.4,
-    res: [{ f: 3200, r: 0.96 }],
+  maracas: { // 粒は少なめ・高めにして、軽い「シャッ」に
+    objects: 14, soundDecay: 0.94, systemDecay: 0.9982, rebound: 0.35, len: 0.3, zero: 0.9,
+    res: [{ f: 4600, r: 0.9 }, { f: 7000, r: 0.8, g: 0.4 }],
   },
   shaker: { // エッグシェイカー:細かい砂のような粒
     objects: 64, soundDecay: 0.96, systemDecay: 0.9992, rebound: 0.6, len: 0.34, zero: 0.35,
@@ -156,10 +156,33 @@ function fadeOut(d, sr, sec) {
   const n = Math.min(d.length, Math.floor(sec * sr));
   for (let i = 0; i < n; i++) d[d.length - 1 - i] *= i / n;
 }
-function normalize(d, peak) {
+// 聞こえ方の大きさ(ラウドネス)の目安:低音を削り高音を少し強調したうえで、
+// 50ミリ秒ごとの音の強さ(RMS)のいちばん大きいところ
+export function loudness(d, sr) {
+  const w = Math.max(1, Math.floor(sr * 0.05));
+  const a = Math.exp((-2 * Math.PI * 150) / sr);
+  let hp = 0, px = 0, pw = 0, acc = 0, best = 0;
+  const sq = new Float32Array(d.length);
+  for (let i = 0; i < d.length; i++) {
+    hp = a * (hp + d[i] - px); px = d[i];          // 150Hz以下を削る
+    const v = hp + 0.5 * (hp - pw); pw = hp;        // 高音を少し強調(人の耳とスマホのスピーカー寄り)
+    sq[i] = v * v;
+    acc += sq[i];
+    if (i >= w) acc -= sq[i - w];
+    if (i >= w - 1) best = Math.max(best, acc / w);
+  }
+  if (d.length < w) best = acc / w;
+  return Math.sqrt(best);
+}
+// すべての楽器をこの大きさにそろえる
+const TARGET = 0.16;
+function normalize(d, level) {
+  const l = loudness(d, ctx.sampleRate);
+  let k = l > 0 ? (TARGET * level) / l : 1;
   let m = 0;
   for (let i = 0; i < d.length; i++) m = Math.max(m, Math.abs(d[i]));
-  if (m > 0) for (let i = 0; i < d.length; i++) d[i] *= peak / m;
+  if (m * k > 2.5) k = 2.5 / m;                    // 極端な瞬間だけ抑える(最後はコンプレッサーで整える)
+  for (let i = 0; i < d.length; i++) d[i] *= k;
   return d;
 }
 function toBuffer(d) {
@@ -177,13 +200,13 @@ function shakerSet(name) {
     const reb = 0.035 + Math.random() * 0.035;
     const ev = [{ t: 0, e }, { t: reb, e: e * p.rebound }];
     if (strong) ev.push({ t: reb + 0.05, e: e * 0.25 });
-    return toBuffer(normalize(renderShaker(p, sr, ev, strong ? p.len * 1.3 : p.len), strong ? 1 : 0.62));
+    return toBuffer(normalize(renderShaker(p, sr, ev, strong ? p.len * 1.3 : p.len), strong ? 1.5 : 1));
   };
   const rollEv = [0, 0.03, 0.06, 0.09, 0.12, 0.15].map((t, i) => ({ t, e: 0.5 + (i % 2) * 0.25 }));
   const set = {
     normal: [make(false), make(false), make(false), make(false)],
     strong: [make(true), make(true)],
-    roll: toBuffer(normalize(renderShaker(p, sr, rollEv, 0.45), 0.6)),
+    roll: toBuffer(normalize(renderShaker(p, sr, rollEv, 0.45), 0.9)),
   };
   cache.set(name, set);
   return set;
@@ -280,8 +303,12 @@ function triangle(t, out, strength = 1) {
   noise(t, out, { type: 'highpass', freq: 6000, q: 0.7, peak: 0.15 * strength, decay: 0.012 });
 }
 
+// 波形を直接組み立てる楽器の音量補正(シェイカー類と同じ大きさに聞こえるよう測って決めた値)
+const TRIM = { clap: 4.4, chimes: 0.79, triangle: 0.5 };
+
 function hit(name, t, out, strong) {
   const rate = rnd(0.97, 1.03);
+  if (TRIM[name]) { const g = ctx.createGain(); g.gain.value = TRIM[name]; g.connect(out); out = g; }
   switch (name) {
     case 'clap':
       clap(t, out, strong ? 1.2 : 0.9);
@@ -289,11 +316,11 @@ function hit(name, t, out, strong) {
       break;
     case 'chimes': {
       const n = strong ? 3 : 1;
-      for (let i = 0; i < n; i++) chime(t + i * 0.06, out, CHIME_NOTES[Math.floor(Math.random() * CHIME_NOTES.length)], strong ? 0.26 : 0.22);
+      for (let i = 0; i < n; i++) chime(t + i * 0.06, out, CHIME_NOTES[Math.floor(Math.random() * CHIME_NOTES.length)], strong ? 0.23 : 0.22);
       break;
     }
     case 'triangle':
-      triangle(t, out, strong ? 1.3 : 1);
+      triangle(t, out, strong ? 1.55 : 1);
       break;
     default: {
       const set = shakerSet(SHAKERS[name] ? name : 'tambourine');
@@ -346,4 +373,22 @@ export function playFinale(instrument) {
   if (instrument !== 'tambourine') playBuffer(shakerSet('tambourine').strong[0], t + 0.005, voice(0.7, -0.2));
   playBuffer(shakerSet('sleighbells').strong[1], t + 0.01, voice(0.55, 0.25));
   bellTree(t + 0.06, voice(0.8, 0, 1.4), 0.13);
+}
+
+// 開発用:楽器1音をオフラインで録音して返す(音量合わせの測定に使う。アプリからは呼ばない)
+export async function __renderOffline(name, strong = false) {
+  const saved = [ctx, dryBus, wetSend];
+  const sr = 48000;
+  const off = new OfflineAudioContext(1, sr * 2, sr);
+  ctx = off; dryBus = off.destination; wetSend = off.createGain(); // 残響なしで測る
+  const savedCache = new Map(cache); cache.clear();
+  try {
+    hit(name, 0.01, off.destination, strong);
+    const buf = await off.startRendering();
+    const d = buf.getChannelData(0);
+    return loudness(d, sr);
+  } finally {
+    [ctx, dryBus, wetSend] = saved;
+    cache.clear(); savedCache.forEach((v, k) => cache.set(k, v));
+  }
 }
